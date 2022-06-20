@@ -16,7 +16,12 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *)
-EXTENDS Naturals
+EXTENDS
+    Naturals,
+    Sequences,
+    
+    \* Internal Modules.
+    RsAccess
 
 -----------------------------------------------------------------------------
 
@@ -78,6 +83,165 @@ NvGetAddrSpaceType ==
     , addrSpaceType : AddrSpaceTypes     \* Type of address space. [OUT]
     ]
 
+\* Possible handle info lookups.
+CONSTANTS
+    GetHandleInfoInvalid,                \* Invalid lookup.
+    GetHandleInfoParent,                 \* Parent device handle.
+    GetHandleInfoClassId                 \* Class Id of the device.
+    
+HandleInfoLookup ==
+    { GetHandleInfoInvalid
+    , GetHandleInfoParent
+    , GetHandleInfoClassId
+    }
+
+\* Object for getting the handle information.
+NvGetHandleInfo ==
+    [ object : Nat                       \* Object to look up. [IN]
+    , index : HandleInfoLookup           \* Handle info lookup type. [IN]
+    , result : Nat                       \* Result. [OUT]
+    ]
+    
+\* Object to get the access rights for an object.
+NvGetAccessRights ==
+    [ object : Nat                       \* Object to look up. [IN]
+    , client : Nat                       \* Client that owns the object. [IN]
+    , result : AccessMask                \* Result of the lookup. [OUT]
+    ]
+    
+\* Object to set inherited share policy.
+NvSetInheritedSharePolicy == RsSharePolicy
+
+\* Object to get the child handle.
+NvGetChildHandle ==
+    [ parent : Nat                       \* Parent object handle. [IN]
+    , classid : Nat                      \* Class id of the child. [IN]
+    , object : Nat                       \* Object ID. [OUT]
+    ]
+    
+\* Object to share another object.
+\* NOTE: Avoid for releases after R450.
+NvShareObject ==
+    [ object : Nat                       \* Object to share. [IN]
+    , share : RsSharePolicy              \* Sharing policy. [IN]
+    ]
+    
+--------------------     (* DIAGNOSTICS *)     ------------------------------
+
+CONSTANTS
+    Nv0000CtrlCmdGetLockMeter,           \* Returns the current lock meter.
+    Nv0000CtrlCmdSetLockMeter,           \* Sets the current lock meter.
+    Nv0000CtrlCmdGetLockMeterEntries,    \* Gets a list of lock meter
+                                         \* entries.
+    Nv0000CtrlCmdProfileRpc,             \* Profiles an RPC in VGX mode.
+    Nv0000CtrlCmdDumpRpc                 \* Dumps RPC runtime information.
+
+\* Possible lock meter states.
+CONSTANTS
+    LockMeterDisabled,                   \* Disables lock metering.
+    LockMeterEnabled,                    \* Enables lock metering.
+    LockMeterReset                       \* Clears the locks, but requires
+                                         \* it is disabled first.
+
+LockMeterStates ==
+    { LockMeterDisabled
+    , LockMeterEnabled
+    , LockMeterReset
+    }
+
+\* Object for getting a meter lock state.
+NvGetLockMeter ==
+    [ state : { LockMeterDisabled        \* Whether the lock meter is
+              , LockMeterEnabled         \* enabled or disabled.
+              }
+    , count : Nat                        \* Number of entries available.
+    , missedCount : Nat                  \* Number of missed entries.
+    , circularBuffer : BOOLEAN           \* If the buffer is circular or
+                                         \* sequential.
+    ]
+
+\* Object for setting a meter lock state.
+NvSetMeterLock ==
+    [ state : LockMeterStates            \* Possible lock meter states.
+    , circularBuffer : BOOLEAN           \* If the buffer is circular or
+                                         \* sequential.
+    ]
+    
+\* Possible metering tags.
+CONSTANTS
+    LockMeterTagAcquireSema,
+    LockMeterTagAcquireSemaForced,
+    LockMeterTagAcquireSemaCond,
+    LockMeterTagReleaseSema,
+    LockMeterTagAcquireApi,
+    LockMeterTagReleaseApi,
+    LockMeterTagAcquireGpus,
+    LockMeterTagReleaseGpus,
+    LockMeterTagData,
+    LockMeterTagRmCtrl,
+    LockMeterTagCfgGet,
+    LockMeterTagCfgSet,
+    LockMeterTagCfgGetEx,
+    LockMeterTagCfgSetEx,
+    LockMeterTagVidHeap,
+    LockMeterTagMapMem,
+    LockMeterTagUnMapMem,
+    LockMeterTagMapMemDma,
+    LockMeterTagUnMapMemDma,
+    LockMeterTagAlloc,
+    LockMeterTagAllocMem,
+    LockMeterTagDupObject,
+    LockMeterTagFreeClient,
+    LockMeterTagFreeDevice,
+    LockMeterTagFreeSubDevice,
+    LockMeterTagFreeSubDeviceDiag,
+    LockMeterTagFreeDisp,
+    LockMeterTagFreeDispCmn,
+    LockMeterTagFreeChannel,
+    LockMeterTagFreeChannelMpeg,
+    LockMeterTagFreeChannelDisp,
+    LockMeterTagIdleChannels,
+    LockMeterTagBindCtxDma,
+    LockMeterTagAllocCtxDma,
+    LockMeterTagIsr,
+    LockMeterTagDpc
+    
+LockMeterTags ==
+    { LockMeterTagAcquireSema, LockMeterTagAcquireSemaForced,
+      LockMeterTagAcquireSemaCond, LockMeterTagReleaseSema,
+      LockMeterTagAcquireApi, LockMeterTagReleaseApi,
+      LockMeterTagAcquireGpus, LockMeterTagReleaseGpus,
+      LockMeterTagData, LockMeterTagRmCtrl,
+      LockMeterTagCfgGet, LockMeterTagCfgSet,
+      LockMeterTagCfgGetEx, LockMeterTagCfgSetEx,
+      LockMeterTagVidHeap, LockMeterTagMapMem,
+      LockMeterTagUnMapMem, LockMeterTagMapMemDma,
+      LockMeterTagUnMapMemDma, LockMeterTagAlloc,
+      LockMeterTagAllocMem, LockMeterTagDupObject,
+      LockMeterTagFreeClient, LockMeterTagFreeDevice,
+      LockMeterTagFreeSubDevice, LockMeterTagFreeSubDeviceDiag,
+      LockMeterTagFreeDisp, LockMeterTagFreeDispCmn,
+      LockMeterTagFreeChannel, LockMeterTagFreeChannelMpeg,
+      LockMeterTagFreeChannelDisp, LockMeterTagIdleChannels,
+      LockMeterTagBindCtxDma, LockMeterTagAllocCtxDma,
+      LockMeterTagIsr, LockMeterTagDpc }
+    
+\* Lock metering entry.
+\* NOTE: We are ignoring the following for this portion:
+      \* - freq
+      \* - line
+      \* - filename
+      \* - cpuNum
+      \* - irql
+      \* - threadId
+NvLockMeterEntry ==
+    [ counter : Nat                      \* Nanoseconds since last boot.
+    , tag : LockMeterTags                \* Which kind of tag is this meter.
+    , data0 : Nat                        \* Tag specific information.
+    , data1 : Nat
+    , data2 : Nat
+    ]
+
 -----------------------------------------------------------------------------
 
 \* This is the NV0000 Allocation Object.
@@ -100,9 +264,15 @@ Nv0000Ctrls ==
                          , Nv0000CtrlCmdGetChildHandle
                          , Nv0000CtrlCmdShareObject
                          } ] \union
+    [ Nv0000CtrlDiag : { Nv0000CtrlCmdGetLockMeter
+                       , Nv0000CtrlCmdSetLockMeter
+                       , Nv0000CtrlCmdGetLockMeterEntries
+                       , Nv0000CtrlCmdProfileRpc
+                       , Nv0000CtrlCmdDumpRpc
+                       } ] \union
     [ Nv0000CtrlGspC : {} ]
 
 =============================================================================
 \* Modification History
-\* Last modified Fri Jun 17 17:02:51 EDT 2022 by mbuchel
+\* Last modified Mon Jun 20 17:03:41 EDT 2022 by mbuchel
 \* Created Fri Jun 17 11:04:19 EDT 2022 by mbuchel
