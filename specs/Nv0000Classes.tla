@@ -241,6 +241,100 @@ NvLockMeterEntry ==
     , data1 : Nat
     , data2 : Nat
     ]
+    
+\* Object for getting the lock meter entries.
+NvGetLockMeterEntries == Seq(NvLockMeterEntry)
+
+\* Profiles the RPC information.
+\* NOTE: Ignoring both start and end time both in nanoseconds.
+\* NOTE: Available RPCs are not known yet.
+\* NOTE: Extra data is not known yet.
+NvProfileRpcEntry ==
+    [ rpcDataTag : {}                    \* Data tag for the RPC command.
+    , rpcExtraData : {}                  \* Extra data related to the RPC.
+    ]
+    
+NvProfileRpcEntries == Seq(NvProfileRpcEntry)
+
+\* Constants for profiling an RPC command.
+CONSTANTS
+    ProfileRpcCmdDisable,                \* Disables the RPC profiling.
+    ProfileRpcCmdEnable,                 \* Enables the RPC profiling.
+    ProfileRpcCmdReset                   \* Resets the RPC profiling.
+    
+\* Profile the requested rpc command.
+NvProfileRpcCmd ==
+    { ProfileRpcCmdDisable
+    , ProfileRpcCmdEnable
+    , ProfileRpcCmdReset
+    }
+
+\* Object to dump the RPC runtime information.
+\* NOTE: This only works running in VGX mode.
+\* NOTE: Ignoring elapsedTimeInNs. [OUT]
+NvDumpRpc ==
+    [ firstEntryOffset : Nat             \* Offset for first entry. [IN]
+    , outputEntryCount : Nat             \* Count of entries in profiler
+                                         \* buffer. [OUT]
+    , remainingEntryCount : Nat          \* Remaining number of
+                                         \* entries. [OUT]
+    , profilers : NvProfileRpcEntries    \* Profiler entries. [OUT]
+    ]
+
+----------------------     (* EVENTS *)      --------------------------------
+
+CONSTANTS
+    Nv0000CtrlCmdSetNotification,        \* Sets an event notification for
+                                         \* system events.
+    Nv0000CtrlCmdGetSystemEventStatus    \* Returns the status of a specified
+                                         \* system event type.
+                                         
+\* Notification actions.
+CONSTANTS
+    EventSetNotificationActionDisable,   \* Disables event notification.
+    EventSetNotificationActionSingle,    \* Enables for a single shot event.
+    EventSetNotificationActionRepeat     \* Repeats the event notification.
+
+EventSetNotifications ==
+    { EventSetNotificationActionDisable
+    , EventSetNotificationActionSingle
+    , EventSetNotificationActionRepeat
+    }
+    
+\* Event types.
+CONSTANTS
+    NotificationDisplayChange,           \* Notification if a display
+                                         \* changes.
+    NotificationEventNonePending,        \* Notification if none are
+                                         \* pending.
+    NotificationVmStart,                 \* VM started notification.
+    NotificationGpuBindEvent,            \* VM additional gpu bound.
+    NotificationTelemetryReport          \* Report from the telemetry.
+
+NvNotificationEvents ==
+    { NotificationDisplayChange
+    , NotificationEventNonePending
+    , NotificationVmStart
+    , NotificationGpuBindEvent
+    , NotificationTelemetryReport
+    }
+
+\* Object to set an event notification.
+\* TODO: Get a list of event classes.
+NvEventSetNotification ==
+    [ event : NvNotificationEvents       \* In the set of event classes.
+    , action : EventSetNotifications     \* Action to preform.
+    ]
+    
+\* Object to get the system event status.
+NvGetSystemEventStatus ==
+    [ event : NvNotificationEvents       \* Event to get the notifier on.
+    , status : Nat                       \* RmStatus.
+    ]
+
+---------------------------  (* GPU *)   ------------------------------------
+
+
 
 -----------------------------------------------------------------------------
 
@@ -264,6 +358,9 @@ Nv0000Ctrls ==
                          , Nv0000CtrlCmdGetChildHandle
                          , Nv0000CtrlCmdShareObject
                          } ] \union
+    [ Nv0000CtrlEvent : { Nv0000CtrlCmdSetNotification
+                        , Nv0000CtrlCmdGetSystemEventStatus
+                        } ] \union
     [ Nv0000CtrlDiag : { Nv0000CtrlCmdGetLockMeter
                        , Nv0000CtrlCmdSetLockMeter
                        , Nv0000CtrlCmdGetLockMeterEntries
@@ -274,5 +371,5 @@ Nv0000Ctrls ==
 
 =============================================================================
 \* Modification History
-\* Last modified Mon Jun 20 17:03:41 EDT 2022 by mbuchel
+\* Last modified Tue Jun 21 15:39:35 EDT 2022 by mbuchel
 \* Created Fri Jun 17 11:04:19 EDT 2022 by mbuchel
